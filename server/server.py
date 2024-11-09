@@ -1,7 +1,7 @@
 import os
 from flask import Flask, flash, redirect, request, url_for
-
-
+from datetime import date
+import db_conn as db
 
 app = Flask(__name__)
 
@@ -30,7 +30,7 @@ def allowed_file(filename):
 
 ALLOWED_EXTENSIONS = {'csv'}
 @app.route("/csvupload", methods=['POST'])
-def upload():
+def upload_csv():
     if 'file' not in request.files:
         return "No file part", 400
     file = request.files['file']
@@ -44,7 +44,28 @@ def upload():
         return "File not allowed", 403
 
 
+@app.route("/addentry", methods=['POST'])
+def upload_entry():
+    user = request.form.get('userid') # change this to be user cookie or auth later
+    date_now = str(date.today())
+    account = request.form.get('account')
+    company = request.form.get('company')
+    location = request.form.get('location')
+    reference = request.form.get('reference')
+    amount = request.form.get('amount')
+    balance = request.form.get('balance')
+    query = """
+            INSERT INTO Transactions (userid, date, account, company, location, reference, amount, balance)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+    values = (user, date_now, account, company, location, reference, amount, balance)
+    db.cursor.execute(query, values)
+    db.conn.commit()
+    return 'works'
 
-
+@app.route("/getinsight", methods=['GET'])
+def upload():
+    #run eitan magic
+    return 'wow'
 
 

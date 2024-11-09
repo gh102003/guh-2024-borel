@@ -15,6 +15,7 @@ psql postgresql://user:password@127.0.0.1:6543/app << EOF
 	  userid INT
     );
     CREATE TABLE Users (
-    userid INT PRIMARY KEY DEFAULT floor(random() * 1000000)
+    userid INT PRIMARY KEY DEFAULT floor(random() * 1000000),
+    score INT
     );
 EOF
