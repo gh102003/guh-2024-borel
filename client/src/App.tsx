@@ -1,33 +1,22 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import {useState} from "react";
 
 function App() {
-  const [count, setCount] = useState(0)
+
+  const [hasUploaded, setUploaded] = useState(false);
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
+      <h1>Borel Budget</h1>
+      <p>
+        Upload your budget spreadsheet and we'll analyse it
       </p>
+      {hasUploaded ?
+        <p>Thanks for uploading your file</p>
+        : <form method="POST" action='http://127.0.0.1:3001/csvupload' className='upload-form' encType="multipart/form-data">
+          <input type='file' name="file" required accept='text/csv'/>
+          <button className="submit" type='submit'>Upload</button>
+        </form>
+      }
     </>
   )
 }

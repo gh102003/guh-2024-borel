@@ -7,7 +7,8 @@ app = Flask(__name__)
 def hello_world():
     return "<p>Hello, World!</p>"
 
-app.config['UPLOAD_FOLDER'] = 'temp/csv' # Folder where files will be stored
+app.config.from_prefixed_env()
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max file size is 16MB
 
 #def generate_random_string():
@@ -27,18 +28,17 @@ ALLOWED_EXTENSIONS = {'csv'}
 @app.route("/csvupload", methods=['POST'])
 def upload():
     if 'file' not in request.files:
-        flash('THERE IS NO FILE')
-        return redirect(request.url)
+        return "No file part", 400
     file = request.files['file']
     if file.filename == '':
-        flash('No selected file')
-        return redirect(request.url)
+        return "No selected file", 400
     if file and allowed_file(file.filename):
         filename = file.filename # to be changed into userid with the name thing
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'] + filename + '.csv'))
-    flash('File successfully uploaded')
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'] + filename))
+        return 'File successfully uploaded', 202
+    else:
+        return "File not allowed", 403
 
-    return redirect(url_for('upload_form'))
 
 
 
