@@ -19,7 +19,12 @@ def file_processing(file:os.PathLike):
     os.system('exec ' + eitan_magic_program + str(file))
     #after
 
-@app.route("/pdfupload", methods=['POST'])
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+ALLOWED_EXTENSIONS = {'csv'}
+@app.route("/csvupload", methods=['POST'])
 def upload():
     if 'file' not in request.files:
         flash('THERE IS NO FILE')
@@ -28,8 +33,9 @@ def upload():
     if file.filename == '':
         flash('No selected file')
         return redirect(request.url)
-    filename = file.filename # to be changed into userid with the name thing
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'] + filename + '.csv'))
+    if file and allowed_file(file.filename):
+        filename = file.filename # to be changed into userid with the name thing
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'] + filename + '.csv'))
     flash('File successfully uploaded')
 
     return redirect(url_for('upload_form'))
