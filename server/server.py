@@ -1,6 +1,8 @@
 import os
 from flask import Flask, flash, redirect, request, url_for
 
+
+
 app = Flask(__name__)
 
 @app.route("/")
@@ -18,6 +20,8 @@ def file_processing(file:os.PathLike):
     eitan_magic_program = '../somepath'
     os.system('exec ' + eitan_magic_program + str(file))
     #after
+
+
 
 def allowed_file(filename):
     return '.' in filename and \
