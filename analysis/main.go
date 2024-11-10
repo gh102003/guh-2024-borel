@@ -39,10 +39,10 @@ var ( // bank presets
 
 var (
 	csv_format      map[string]int //= map[string]int{"Date": 0, "Party": 1, "Reference": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
-	date_format     string         // = "02/01/2006"
-	input_path      = flag.String("p", "", "CSV Path")
-	input_bank      = flag.String("b", "", "Input bank")
-	input_user      = flag.Int("u", -1, "User ID")
+	date_format     string         // = "02/01/2006" 
+	input_path      = flag.String("p", "", "CSV Path") 
+	input_bank      = flag.String("b", "", "Input bank") // hsbc or starling
+	input_user      = flag.Int("u", -1, "User ID") // number for the user
 	input_operation = flag.Bool("o", false, " If false Parse CSV; require CSV path, bank, userID, If true send prompt require userID")
 	input_testmode  = flag.Bool("t", false, "Enter test mode to run client")
 	open_ai_key     string
@@ -252,7 +252,7 @@ func parse_csv(records [][]string) statement {
 }
 
 func save_to_db(stmt statement, userid int) {
-	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543 sslmode=disable"
+	connect_start := "user=user dbname=postgres password=password host=127.0.0.1 port=6543 sslmode=disable"
 	db, err := sql.Open("postgres", connect_start)
 	if err != nil {
 		log.Fatal(err)
@@ -300,7 +300,7 @@ func get_transactions(db *sql.DB, userid int) ([]transaction, error) {
 }
 
 func read_from_db(userid int) []transaction {
-	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543 sslmode=disable"
+	connect_start := "user=user dbname=postgres password=password host=127.0.0.1 port=6543 sslmode=disable"
 	db, err := sql.Open("postgres", connect_start)
 	if err != nil {
 		log.Fatal("error connecting to database", err)

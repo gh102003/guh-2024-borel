@@ -34,7 +34,11 @@ def upload_csv():
         return "No selected file", 400
     if file and allowed_file(file.filename):
         filename = file.filename # to be changed into userid with the name thing
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'] + filename))
+        path = os.path.join(app.config['UPLOAD_FOLDER'] + filename)
+        file.save(path)
+
+        upload_csv_to_db(path)
+        # run analysis code to upload CSV to database
         return 'File successfully uploaded', 202
     else:
         return "File not allowed", 403
@@ -63,3 +67,14 @@ def upload():
     return 'wow'
 
 
+
+def upload_csv_to_db(csv_path, bank_format="starling", user_id=123):
+    script_path = os.path.join(os.getcwd(), "..", "analysis", "borel-app")
+
+    # exe file extension for Windows
+    if os.name == 'nt':
+        script_path += ".exe"
+
+    command = f'{script_path} -p="{csv_path}" -b="{bank_format}" -u={user_id} -o=false'
+
+    os.system(command)
