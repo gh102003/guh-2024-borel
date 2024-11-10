@@ -83,3 +83,12 @@ input::file-selector-button {
     background-color: #656bde;
   }
 }
+
+.analysis {
+  .analysis-text {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: left;
+  }
+}
