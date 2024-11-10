@@ -350,10 +350,9 @@ func buildPrompt(transactions []transaction) string {
 		))
 	}
 	promptBuilder.WriteString("\nProvide the following insights:\n")
-	promptBuilder.WriteString("- Account summary (total balance, total inflow, total outflow)\n")
 	promptBuilder.WriteString("- Rigid and flexible spending habits\n")
-	promptBuilder.WriteString("- Insights into top spending categories and most frequent transactions\n")
 	promptBuilder.WriteString("- Highlights of potential saving opportunities\n")
+	promptBuilder.WriteString("- Calculate a 'budgeting score' which takes in values from income, saving goal, the amount and frequency of flexible expenses. This goal should be out of 100, where 0 is 100% impulsive. Impulsivity should lower the score.")
 
 	return promptBuilder.String()
 }
