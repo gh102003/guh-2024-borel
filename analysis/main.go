@@ -38,8 +38,8 @@ var ( // bank presets
 )
 
 var (
-	csv_format      = map[string]int{"Date": 0, "Party": 1, "Reference": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
-	date_format     = "02/01/2006"
+	csv_format      map[string]int //= map[string]int{"Date": 0, "Party": 1, "Reference": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
+	date_format     string         // = "02/01/2006"
 	input_path      = flag.String("p", "", "CSV Path")
 	input_bank      = flag.String("b", "", "Input bank")
 	input_user      = flag.Int("u", -1, "User ID")
@@ -71,7 +71,7 @@ func main() {
 	}
 
 	switch {
-	case *input_operation: // send prompt
+	case *input_operation: // send prompt o is true
 
 		err := godotenv.Load() // load api key
 		if err != nil {
@@ -90,7 +90,7 @@ func main() {
 
 		}
 
-	case !*input_operation: //parse csv
+	case !*input_operation: //parse csv o is false
 
 		preset, ok := banks[*input_bank]
 		if !ok {
@@ -114,8 +114,13 @@ func main() {
 			return
 		}
 		if !*input_testmode {
-			save_to_db(parse_csv(records), *input_user) // parse -> save to db
+			stmnt := parse_csv(records)
+			plot := Create_plot(&stmnt)
+			Plot_to_csv(plot)
+			save_to_db(stmnt, *input_user) // parse -> save to db
 		} else {
+
+			//TEST MODE
 			fmt.Print("Running Test Mode\n")
 			err := godotenv.Load() // load api key
 			if err != nil {
@@ -356,50 +361,3 @@ func buildPrompt(transactions []transaction) string {
 
 	return promptBuilder.String()
 }
-
-/*
-func (data *statement) total_spend() float64 {
-	var sum float64 = 0
-	for _, trans := range data.transactions {
-		sum += trans.amount
-	}
-	return sum
-}
-
-func (data *statement) total_in() float64 {
-	var sum float64 = 0
-	for _, trans := range data.transactions {
-		if trans.amount > 0 {
-			sum += trans.amount
-		}
-	}
-	return sum
-}
-
-func (data *statement) total_out() float64 {
-	return data.total_spend() - data.total_in()
-}
-
-func (data *statement) total_trans() int {
-	return len(data.transactions)
-}
-
-func (data *statement) frequancy() float64 {
-	trans := data.total_trans()
-	return float64(trans) / data.period.Hours() / float64(24)
-
-}
-
-func (data *statement) summarise() {
-	fmt.Printf("Summary for statement from %f to %f", float64(data.start.Hour())/float64(24), float64(data.start.Add(data.period).Hour())/float64(24))
-	fmt.Printf("Total Transactions: %d \n Transaction Frequancy: %f \n Income: %f \n Expenses: %f", data.total_trans(), data.frequancy(), data.total_in(), data.total_out())
-}
-*/
-/* func catagorise(data statement, catagories map[string]string) [][]transaction {
-
-	for transaction := range data.transactions {
-
-	}
-
-}
-*/
