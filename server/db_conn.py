@@ -6,5 +6,4 @@ try:
     cursor = conn.cursor()
 except ValueError:
     print('run the posgress and also setup script')
-# Create a cursor
 

@@ -13,14 +13,10 @@ app.config.from_prefixed_env()
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max file size is 16MB
 
-#def generate_random_string():
-#    characters = string.ascii_letters + string.digits  # Includes uppercase, lowercase letters, and digits
-#    return ''.join(random.choices(characters, k=5))
 
-def file_processing(file:os.PathLike):
-    eitan_magic_program = '../somepath'
-    os.system('exec ' + eitan_magic_program + str(file))
-    #after
+def file_processing(file:os.PathLike, userid=1, bank='starling'):
+    eitan_magic_program = '../analysis/borel-app'
+    os.system('exec ' + eitan_magic_program + '-p' + str(file) + '-o false -u' + str(userid) + '-b ' + bank)
 
 
 
@@ -48,17 +44,15 @@ def upload_csv():
 def upload_entry():
     user = request.form.get('userid') # change this to be user cookie or auth later
     date_now = str(date.today())
-    account = request.form.get('account')
-    company = request.form.get('company')
-    location = request.form.get('location')
+    party = request.form.get('party')
     reference = request.form.get('reference')
     amount = request.form.get('amount')
     balance = request.form.get('balance')
     query = """
-            INSERT INTO Transactions (userid, date, account, company, location, reference, amount, balance)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO Transactions (userid, date, account, party, location, reference, amount, balance)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
-    values = (user, date_now, account, company, location, reference, amount, balance)
+    values = (user, date_now, party, reference, amount, balance)
     db.cursor.execute(query, values)
     db.conn.commit()
     return 'works'

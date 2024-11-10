@@ -273,7 +273,7 @@ func save_to_db(stmt statement, userid int) {
 }
 
 func get_transactions(db *sql.DB, userid int) ([]transaction, error) {
-	query := `SELECT * FROM  transactions WHERE userid = $1`
+	query := `SELECT date, party, reference, amount, balance FROM transactions WHERE userid = $1`
 	row, err := db.Query(query, userid)
 	if err != nil {
 		fmt.Printf("error querrying transactions %v", err)
