@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/csv"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
-
 	"strings"
 	"time"
 
@@ -24,10 +24,10 @@ type bank_preset struct {
 }
 
 var ( // bank presets
-	starling_csv  = map[string]int{"Date": 0, "Account": -1, "Company": 1, "Location": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
+	starling_csv  = map[string]int{"Date": 0, "Party": 1, "Reference": 2, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
 	starling_date = "02/01/2006"
 
-	hsbc_csv  = map[string]int{"Date": 0, "Account": 1, "Company": -1, "Location": -1, "PaidIn": 3, "PaidOut": 4, "Balance": -1}
+	hsbc_csv  = map[string]int{"Date": 0, "Party": -1, "Reference": 2, "PaidIn": 2, "PaidOut": 3, "Balance": -1}
 	hsbc_date = "02 Jan 06"
 
 	//bank map
@@ -38,23 +38,21 @@ var ( // bank presets
 )
 
 var (
-	csv_format  = map[string]int{"Date": 0, "Account": -1, "Company": 1, "Location": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
-	date_format = "02/01/2006"
-	input_path  = flag.String("p", "", "CSV Path")
-	input_bank  = flag.String("b", "", "Input bank")
-	input_user  = flag.Int("u", -1, "User ID")
-	open_ai_key string
+	csv_format      = map[string]int{"Date": 0, "Party": 1, "Reference": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
+	date_format     = "02/01/2006"
+	input_path      = flag.String("p", "", "CSV Path")
+	input_bank      = flag.String("b", "", "Input bank")
+	input_user      = flag.Int("u", -1, "User ID")
+	input_operation = flag.Bool("o", false, " If false Parse CSV; require CSV path, bank, userID, If true send prompt require userID")
+	open_ai_key     string
 )
 
 type transaction struct {
-	date      time.Time
-	account   string
-	company   string
-	location  string
-	reference string
-	amount    float64
-	//out       float64
-	balance float64
+	date      time.Time // when
+	party     string    //who to
+	reference string    // what for
+	amount    float64   //how much
+	balance   float64
 }
 
 type statement struct {
@@ -67,34 +65,46 @@ func main() {
 
 	flag.Parse()
 
-	preset := banks[*input_bank]
-	csv_format, date_format = preset.csv_format, preset.date_format //handle exceptions later
+	switch {
+	case *input_operation: // send prompt
 
-	err := godotenv.Load()
-	if err != nil {
-		fmt.Printf("Error opening .env file %v\n", err)
+		err := godotenv.Load() // load api key
+		if err != nil {
+			fmt.Printf("Error opening .env file %v\n", err)
+		}
+
+		open_ai_key = os.Getenv("OPENAI_API_KEY")
+
+		if open_ai_key == "" {
+			log.Fatalf("API key not found")
+		}
+
+		summarise(read_from_db(*input_user), open_ai_key)
+
+	case !*input_operation: //parse csv
+
+		preset := banks[*input_bank]
+		csv_format, date_format = preset.csv_format, preset.date_format //TODO: handle exceptions later
+
+		file, err := os.Open(*input_path)
+		if err != nil {
+			fmt.Printf("Error opening file: %v\n", err)
+			return
+		}
+		defer file.Close()
+
+		reader := csv.NewReader(file)
+
+		records, err := reader.ReadAll()
+		if err != nil {
+			fmt.Printf("Error reading CSV file: %v\n", err)
+			return
+		}
+
+		save_to_db(parse_csv(records), *input_user) // parse -> save to db
 	}
 
-	open_ai_key = os.Getenv("OPENAI_API_KEY")
-	if open_ai_key == "" {
-		log.Fatalf("API key not found")
-	}
-
-	file, err := os.Open(*input_path)
-	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		return
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		fmt.Printf("Error reading CSV file: %v\n", err)
-		return
-	}
-	summarise(parse_csv(records), open_ai_key)
+	//summarise(parse_csv(records).transactions, open_ai_key)
 }
 
 func parse_csv(records [][]string) statement {
@@ -182,13 +192,10 @@ func parse_csv(records [][]string) statement {
 		// build transaction
 		trans := transaction{
 			date:      date,
-			account:   verify_index_string("Account", record),
-			company:   verify_index_string("Company", record),
-			location:  verify_index_string("Location", record),
+			party:     verify_index_string("Party", record),
 			reference: verify_index_string("Reference", record),
-			//out:       out,
-			amount:  in - out,
-			balance: balance,
+			amount:    in - out,
+			balance:   balance,
 		}
 		transactions = append(transactions, trans)
 	}
@@ -212,25 +219,72 @@ func parse_csv(records [][]string) statement {
 	return stmt
 }
 
-/*
-	 func save_to_db(stmt statement, userid int){
-		connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543"
-		db, err := sql.Open("postgres", connect_start)
-		if err != nil{
-			log.Fatal(err)
+func save_to_db(stmt statement, userid int) {
+	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543"
+	db, err := sql.Open("postgres", connect_start)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	for _, trans := range stmt.transactions {
+		date := trans.date.Format("2006-01-02")
+		party, reference, amount, balance := trans.party, trans.reference, trans.amount, trans.balance
+		_, err := db.Exec(`INSERT INTO Transactions (userid, date, party, reference, amount, balance)
+							VALUES ($1, $2, $3, $4 ,$5, $6)`,
+			userid, date, party, reference, amount, balance)
+		if err != nil {
+			log.Printf("error inserting transaction on date %s", date)
 		}
-		for _, trans := range stmt.transactions{
-			date, account, company, location, reference, amount, balance := transaction.date, trans.account, trans.company
-			_, err := db.Query("INSERT INTO Transactions (userid, date, account, company, location, reference, amount, balance)
-								VALUES(%d, %s, %s, %s,%s, %s, %s, %s)", userid,)
-
-		}
+	}
+	fmt.Printf("Saved to the database sucessfully")
 
 }
-*/
-func summarise(statement statement, key string) {
 
-	prompt := buildPrompt(statement.transactions)
+func get_transactions(db *sql.DB, userid int) ([]transaction, error) {
+	query := `SELECT * FROM  transactions WHERE userid = $1`
+	row, err := db.Query(query, userid)
+	if err != nil {
+		fmt.Printf("error querrying transactions %v", err)
+		return nil, err
+	}
+	defer row.Close()
+
+	var transactions []transaction
+
+	for row.Next() {
+		var trans transaction
+		err := row.Scan(&trans.date, &trans.party, &trans.reference, &trans.amount, &trans.balance)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning row: %w", err)
+		}
+		transactions = append(transactions, trans)
+	}
+
+	if err := row.Err(); err != nil {
+		return nil, fmt.Errorf("error during row iteration %w", err)
+	}
+
+	return transactions, nil
+}
+
+func read_from_db(userid int) []transaction {
+	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543"
+	db, err := sql.Open("postgres", connect_start)
+	if err != nil {
+		log.Fatal("error connecting to database", err)
+	}
+	defer db.Close()
+
+	transactions, err := get_transactions(db, userid)
+	if err != nil {
+		log.Fatal("error fetching transactions:", err)
+	}
+	return transactions
+}
+
+func summarise(statement []transaction, key string) {
+
+	prompt := buildPrompt(statement)
 
 	client := openai.NewClient(key)
 
@@ -264,8 +318,8 @@ func buildPrompt(transactions []transaction) string {
 	promptBuilder.WriteString("Analyze the following bank statement data:\n\n")
 	for _, txn := range transactions {
 		promptBuilder.WriteString(fmt.Sprintf(
-			"Date: %s, Account: %s, Company: %s, Location: %s, Reference: %s, In: %.2f, Balance: %.2f\n",
-			txn.date.Format("2006-01-02"), txn.account, txn.company, txn.location, txn.reference, txn.amount, txn.balance,
+			"Date: %s, Party: %s, Reference: %s, Amount: %.2f, Balance: %.2f\n",
+			txn.date.Format("2006-01-02"), txn.party, txn.reference, txn.amount, txn.balance,
 		))
 	}
 	promptBuilder.WriteString("\nProvide the following insights:\n")
