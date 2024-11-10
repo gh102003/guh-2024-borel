@@ -12,10 +12,11 @@ function App() {
   useEffect(() => {
     if (hasUploaded) {
       console.log("fetch");
-      
       fetch("/api/getinsight/123")
         .then(res => res.text())
-        .then(res => setAnalysis(res.split("Response from OpenAI:")[1].trim()));
+        .then(res => {
+          setAnalysis(res.split("Response from OpenAI:")[1].trim());
+        });
     } else {
       setAnalysis(null);
     }
