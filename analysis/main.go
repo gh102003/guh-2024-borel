@@ -8,8 +8,11 @@ import (
 	"log"
 	"os"
 	"strconv"
+
 	"strings"
 	"time"
+
+	_ "github.com/lib/pq"
 
 	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
@@ -39,6 +42,7 @@ var (
 	date_format = "02/01/2006"
 	input_path  = flag.String("p", "", "CSV Path")
 	input_bank  = flag.String("b", "", "Input bank")
+	input_user  = flag.Int("u", -1, "User ID")
 	open_ai_key string
 )
 
@@ -48,9 +52,9 @@ type transaction struct {
 	company   string
 	location  string
 	reference string
-	in        float64
-	out       float64
-	balance   float64
+	amount    float64
+	//out       float64
+	balance float64
 }
 
 type statement struct {
@@ -90,7 +94,6 @@ func main() {
 		fmt.Printf("Error reading CSV file: %v\n", err)
 		return
 	}
-
 	summarise(parse_csv(records), open_ai_key)
 }
 
@@ -183,9 +186,9 @@ func parse_csv(records [][]string) statement {
 			company:   verify_index_string("Company", record),
 			location:  verify_index_string("Location", record),
 			reference: verify_index_string("Reference", record),
-			out:       out,
-			in:        in,
-			balance:   balance,
+			//out:       out,
+			amount:  in - out,
+			balance: balance,
 		}
 		transactions = append(transactions, trans)
 	}
@@ -202,10 +205,29 @@ func parse_csv(records [][]string) statement {
 	fmt.Printf("Statement Start Date: %v\n", stmt.start)
 	fmt.Printf("Statement Period: %v days\n", stmt.period.Hours()/24)
 	fmt.Printf("Transactions: %d \n", len(stmt.transactions))
+	//for _, trans := range transactions {
+	//	fmt.Println(trans)
+	//}
 
 	return stmt
 }
 
+/*
+	 func save_to_db(stmt statement, userid int){
+		connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543"
+		db, err := sql.Open("postgres", connect_start)
+		if err != nil{
+			log.Fatal(err)
+		}
+		for _, trans := range stmt.transactions{
+			date, account, company, location, reference, amount, balance := transaction.date, trans.account, trans.company
+			_, err := db.Query("INSERT INTO Transactions (userid, date, account, company, location, reference, amount, balance)
+								VALUES(%d, %s, %s, %s,%s, %s, %s, %s)", userid,)
+
+		}
+
+}
+*/
 func summarise(statement statement, key string) {
 
 	prompt := buildPrompt(statement.transactions)
@@ -242,8 +264,8 @@ func buildPrompt(transactions []transaction) string {
 	promptBuilder.WriteString("Analyze the following bank statement data:\n\n")
 	for _, txn := range transactions {
 		promptBuilder.WriteString(fmt.Sprintf(
-			"Date: %s, Account: %s, Company: %s, Location: %s, Reference: %s, In: %.2f, Out:%.2f, Balance: %.2f\n",
-			txn.date.Format("2006-01-02"), txn.account, txn.company, txn.location, txn.reference, txn.in, txn.out, txn.balance,
+			"Date: %s, Account: %s, Company: %s, Location: %s, Reference: %s, In: %.2f, Balance: %.2f\n",
+			txn.date.Format("2006-01-02"), txn.account, txn.company, txn.location, txn.reference, txn.amount, txn.balance,
 		))
 	}
 	promptBuilder.WriteString("\nProvide the following insights:\n")
