@@ -11,6 +11,8 @@ function App() {
 
   useEffect(() => {
     if (hasUploaded) {
+      console.log("fetch");
+      
       fetch("/api/getinsight/123")
         .then(res => res.text())
         .then(res => setAnalysis(res.split("Response from OpenAI:")[1].trim()));
@@ -40,9 +42,9 @@ function App() {
       {analysis &&
         <div className="analysis">
           <p>Response from OpenAI:</p>
-          <p className="analysis-text">
+          <div className="analysis-text">
             <Markdown>{analysis}</Markdown>
-          </p>
+          </div>
         </div>
       }
     </>

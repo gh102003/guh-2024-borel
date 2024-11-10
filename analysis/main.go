@@ -355,9 +355,10 @@ func buildPrompt(transactions []transaction) string {
 		))
 	}
 	promptBuilder.WriteString("\nProvide the following insights:\n")
-	promptBuilder.WriteString("- Rigid and flexible spending habits\n")
-	promptBuilder.WriteString("- Highlights of potential saving opportunities\n")
-	promptBuilder.WriteString("- Calculate a 'budgeting score' which takes in values from income, saving goal, the amount and frequency of flexible expenses. This goal should be out of 100, where 0 is 100% impulsive. Impulsivity should lower the score.")
+
+	promptBuilder.WriteString("- Concisely categorise rigid and flexible spending habits\n")
+	promptBuilder.WriteString("- Calculate a budgeting score based on impulsivity in the data and implusivity clustering in the data, as well as the proportion of flexible spendings. A higher score is worse, the highest score is 100. Be consice. Prioritise lower value but frequent expenses.")
+	promptBuilder.WriteString("- Provide advice on adjusting spending habits and improving the score\n")
 
 	return promptBuilder.String()
 }

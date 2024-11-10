@@ -78,7 +78,7 @@ def upload_entry():
     
 
 
-def upload_csv_to_db(csv_path, bank_format="starling", user_id=123):
+def upload_csv_to_db(csv_path, bank_format="test", user_id=123):
     global script_path
     command = f'{script_path} -p="{csv_path}" -b="{bank_format}" -u={user_id} -o=false'
     os.system(command)
