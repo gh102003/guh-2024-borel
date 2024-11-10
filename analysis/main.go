@@ -252,7 +252,7 @@ func parse_csv(records [][]string) statement {
 }
 
 func save_to_db(stmt statement, userid int) {
-	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543"
+	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543 sslmode=disable"
 	db, err := sql.Open("postgres", connect_start)
 	if err != nil {
 		log.Fatal(err)
@@ -300,7 +300,7 @@ func get_transactions(db *sql.DB, userid int) ([]transaction, error) {
 }
 
 func read_from_db(userid int) []transaction {
-	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543"
+	connect_start := "user=admin dbname=app password=password host=127.0.0.1 port=6543 sslmode=disable"
 	db, err := sql.Open("postgres", connect_start)
 	if err != nil {
 		log.Fatal("error connecting to database", err)
