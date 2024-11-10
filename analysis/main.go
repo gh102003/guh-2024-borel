@@ -15,10 +15,30 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
+type bank_preset struct {
+	csv_format  map[string]int
+	date_format string
+}
+
+var ( // bank presets
+	starling_csv  = map[string]int{"Date": 0, "Account": -1, "Company": 1, "Location": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
+	starling_date = "02/01/2006"
+
+	hsbc_csv  = map[string]int{"Date": 0, "Account": 1, "Company": -1, "Location": -1, "PaidIn": 3, "PaidOut": 4, "Balance": -1}
+	hsbc_date = "02 Jan 06"
+
+	//bank map
+	banks = map[string]bank_preset{
+		"starling": {csv_format: starling_csv, date_format: starling_date},
+		"hsbc":     {csv_format: hsbc_csv, date_format: hsbc_date},
+	}
+)
+
 var (
 	csv_format  = map[string]int{"Date": 0, "Account": -1, "Company": 1, "Location": -1, "PaidIn": 4, "PaidOut": -1, "Balance": 5}
 	date_format = "02/01/2006"
 	input_path  = flag.String("p", "", "CSV Path")
+	input_bank  = flag.String("b", "", "Input bank")
 	open_ai_key string
 )
 
@@ -42,6 +62,9 @@ type statement struct {
 func main() {
 
 	flag.Parse()
+
+	preset := banks[*input_bank]
+	csv_format, date_format = preset.csv_format, preset.date_format //handle exceptions later
 
 	err := godotenv.Load()
 	if err != nil {
@@ -152,8 +175,6 @@ func parse_csv(records [][]string) statement {
 			fmt.Printf("Bal: Error parsing amount on row %d: %v\n", i+1, err)
 			continue
 		}
-
-		// handle dates
 
 		// build transaction
 		trans := transaction{
