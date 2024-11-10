@@ -44,6 +44,7 @@ var (
 	input_bank      = flag.String("b", "", "Input bank")
 	input_user      = flag.Int("u", -1, "User ID")
 	input_operation = flag.Bool("o", false, " If false Parse CSV; require CSV path, bank, userID, If true send prompt require userID")
+	input_testmode  = flag.Bool("t", false, "Enter test mode to run client")
 	open_ai_key     string
 )
 
@@ -65,6 +66,10 @@ func main() {
 
 	flag.Parse()
 
+	if *input_testmode {
+
+	}
+
 	switch {
 	case *input_operation: // send prompt
 
@@ -78,13 +83,21 @@ func main() {
 		if open_ai_key == "" {
 			log.Fatalf("API key not found")
 		}
+		if !*input_testmode {
+			summarise(read_from_db(*input_user), open_ai_key)
+		} else {
+			//summarise(read_from_db(*input_user), open_ai_key) unsure
 
-		summarise(read_from_db(*input_user), open_ai_key)
+		}
 
 	case !*input_operation: //parse csv
 
-		preset := banks[*input_bank]
-		csv_format, date_format = preset.csv_format, preset.date_format //TODO: handle exceptions later
+		preset, ok := banks[*input_bank]
+		if !ok {
+			log.Fatalf("Bank not valid")
+		}
+
+		csv_format, date_format = preset.csv_format, preset.date_format
 
 		file, err := os.Open(*input_path)
 		if err != nil {
@@ -100,8 +113,22 @@ func main() {
 			fmt.Printf("Error reading CSV file: %v\n", err)
 			return
 		}
+		if !*input_testmode {
+			save_to_db(parse_csv(records), *input_user) // parse -> save to db
+		} else {
+			fmt.Print("Running Test Mode\n")
+			err := godotenv.Load() // load api key
+			if err != nil {
+				fmt.Printf("Error opening .env file %v\n", err)
+			}
 
-		save_to_db(parse_csv(records), *input_user) // parse -> save to db
+			open_ai_key = os.Getenv("OPENAI_API_KEY")
+			if open_ai_key == "" {
+				log.Fatalf("API key not found")
+			}
+			summarise(parse_csv(records).transactions, open_ai_key)
+
+		}
 	}
 
 	//summarise(parse_csv(records).transactions, open_ai_key)
