@@ -1,2 +1,5 @@
 /csvs/
 .env
+*.py
+"pd"
+"pld"
